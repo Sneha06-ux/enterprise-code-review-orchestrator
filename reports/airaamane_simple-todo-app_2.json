@@ -1,0 +1,749 @@
+{
+  "pullRequest": {
+    "owner": "airaamane",
+    "repo": "simple-todo-app",
+    "number": 2
+  },
+  "fileReviews": [
+    {
+      "file": "src/controllers/searchController.ts",
+      "codeQuality": {
+        "file": "src/controllers/searchController.ts",
+        "issues": [
+          {
+            "line": 13,
+            "severity": "high",
+            "category": "security",
+            "description": "Missing input validation for query parameter. The query string is used directly without sanitization or validation, which could lead to injection attacks or unexpected behavior.",
+            "suggestion": "Add input validation: check if query exists, validate its type, length, and format. Consider using a validation library like Joi or Zod. Example: if (!query || typeof query !== 'string' || query.length > 100) { return res.status(400).json({ error: 'Invalid query parameter' }); }"
+          },
+          {
+            "line": 14,
+            "severity": "critical",
+            "category": "security",
+            "description": "Missing authentication check. The code accesses req.user?.id with optional chaining, meaning userId could be undefined if user is not authenticated, potentially allowing unauthorized access.",
+            "suggestion": "Add explicit authentication check before processing: if (!req.user?.id) { return res.status(401).json({ error: 'Authentication required' }); }. Consider using authentication middleware to ensure req.user always exists."
+          },
+          {
+            "line": 19,
+            "severity": "medium",
+            "category": "security",
+            "description": "Returning potentially sensitive data without filtering. The results are returned directly without sanitizing or filtering sensitive fields.",
+            "suggestion": "Implement data filtering to remove sensitive fields before returning: const sanitizedResults = results.map(item => ({ id: item.id, title: item.title, ... })); res.json(sanitizedResults);"
+          },
+          {
+            "line": 22,
+            "severity": "high",
+            "category": "security",
+            "description": "Poor error handling exposing internal details. Returning error.message directly to clients can leak sensitive information about the system architecture, database structure, or internal logic.",
+            "suggestion": "Return generic error messages to clients and log detailed errors server-side: console.error('Search error:', error); res.status(500).json({ error: 'An error occurred while processing your search' });"
+          },
+          {
+            "line": 10,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "Missing async error handling. The async method is not wrapped with try-catch or error handling middleware, which could lead to unhandled promise rejections.",
+            "suggestion": "Wrap the entire search method in try-catch or use an async error handling wrapper middleware. Alternatively, ensure Express 5+ is used which handles async errors automatically, or use express-async-errors package."
+          },
+          {
+            "line": 29,
+            "severity": "critical",
+            "category": "security",
+            "description": "No try-catch block for async operations. The advancedSearch method performs async database operations without error handling, risking unhandled promise rejections and application crashes.",
+            "suggestion": "Wrap the entire method body in a try-catch block: try { /* existing code */ } catch (error) { console.error('Advanced search error:', error); res.status(500).json({ error: 'Search failed' }); }"
+          },
+          {
+            "line": 40,
+            "severity": "critical",
+            "category": "security",
+            "description": "SQL injection vulnerability! The query parameter 'q' is directly interpolated into the SQL string using template literals, allowing attackers to execute arbitrary SQL commands.",
+            "suggestion": "Use parameterized queries exclusively: if (q) { sql += ' AND (title LIKE ? OR description LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }. Never concatenate user input directly into SQL strings."
+          },
+          {
+            "line": 32,
+            "severity": "critical",
+            "category": "security",
+            "description": "Missing authentication check in advancedSearch. userId could be undefined, allowing unauthenticated users to query the database or causing SQL errors.",
+            "suggestion": "Add authentication validation: if (!req.user?.id) { return res.status(401).json({ error: 'Authentication required' }); }"
+          },
+          {
+            "line": 33,
+            "severity": "high",
+            "category": "performance",
+            "description": "No rate limiting implemented. The search endpoints could be abused for DoS attacks or excessive resource consumption, especially with complex queries.",
+            "suggestion": "Implement rate limiting using middleware like express-rate-limit: import rateLimit from 'express-rate-limit'; const searchLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }); Apply to routes."
+          },
+          {
+            "line": 35,
+            "severity": "high",
+            "category": "performance",
+            "description": "Using SELECT * is inefficient. Retrieving all columns when only specific fields are needed wastes bandwidth, memory, and database resources.",
+            "suggestion": "Specify only required columns: let sql = 'SELECT id, title, description, priority, completed, created_at FROM todos WHERE user_id = ?';"
+          },
+          {
+            "line": 40,
+            "severity": "medium",
+            "category": "performance",
+            "description": "Inefficient LIKE query with leading wildcard. Using LIKE '%search%' prevents index usage and results in full table scans for large datasets.",
+            "suggestion": "Consider using full-text search indexes if available in your database, or at minimum avoid leading wildcards when possible. For MySQL: use FULLTEXT indexes. For PostgreSQL: use tsvector and GIN indexes."
+          },
+          {
+            "line": 49,
+            "severity": "high",
+            "category": "performance",
+            "description": "Missing pagination. The query could return thousands or millions of records, causing memory exhaustion, slow response times, and poor user experience.",
+            "suggestion": "Implement pagination: Add limit and offset parameters. Example: const limit = Math.min(parseInt(req.query.limit) || 20, 100); const offset = parseInt(req.query.offset) || 0; sql += ' LIMIT ? OFFSET ?'; params.push(limit, offset);"
+          },
+          {
+            "line": 50,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "Undefined 'db' object. The code references 'db.query()' but 'db' is not imported or defined, which will cause a runtime error.",
+            "suggestion": "Import the database connection: import { db } from '../database/connection.js'; or inject it as a dependency through the constructor."
+          },
+          {
+            "line": 35,
+            "severity": "medium",
+            "category": "maintainability",
+            "description": "Manual SQL query building is error-prone and hard to maintain. Building SQL strings manually increases complexity and bug risk.",
+            "suggestion": "Use a query builder like Knex.js or an ORM like TypeORM/Prisma: const query = db('todos').where('user_id', userId); if (q) query.where(builder => builder.where('title', 'like', `%${q}%`).orWhere('description', 'like', `%${q}%`));"
+          },
+          {
+            "line": 7,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "Class methods should be bound or use arrow functions. The methods 'search' and 'advancedSearch' are not bound, which could cause 'this' context issues when used as route handlers.",
+            "suggestion": "Use arrow functions for class methods: search = async (req: Request, res: Response) => { ... } or bind them in the constructor, or use a wrapper function when registering routes."
+          },
+          {
+            "line": 30,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "Inconsistent parameter extraction. Some parameters are destructured while userId is accessed separately, reducing code readability.",
+            "suggestion": "Destructure all parameters consistently: const { q, priority, tags, completed } = req.query; const userId = req.user?.id;"
+          },
+          {
+            "line": 30,
+            "severity": "low",
+            "category": "bug-risk",
+            "description": "Unused parameter 'tags'. The 'tags' parameter is destructured from req.query but never used in the function, indicating incomplete implementation or dead code.",
+            "suggestion": "Either implement the tags filtering logic or remove the unused parameter: if (tags) { sql += ' AND tags @> ?'; params.push(tags); }"
+          },
+          {
+            "line": 30,
+            "severity": "low",
+            "category": "bug-risk",
+            "description": "Unused parameter 'completed'. The 'completed' parameter is destructured but never used in the query logic.",
+            "suggestion": "Implement the completed filter: if (completed !== undefined) { sql += ' AND completed = ?'; params.push(completed === 'true'); }"
+          },
+          {
+            "line": 44,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "Incorrect parameter order. Parameters are pushed to the params array before the SQL string is updated, causing a mismatch between placeholders and parameter positions.",
+            "suggestion": "Maintain consistent order: push parameters in the same order as SQL placeholders appear. Refactor to build queries more systematically or use a query builder."
+          },
+          {
+            "line": 1,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "Missing type definitions for request extensions. The code assumes req.user exists but this is not typed in the standard Express Request type.",
+            "suggestion": "Create a custom type definition: Create a types file with: declare global { namespace Express { interface Request { user?: { id: string; /* other fields */ }; } } } or use a typed middleware library."
+          },
+          {
+            "line": 7,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "Controller class could benefit from dependency injection. Hardcoding dependencies (like searchTodos utility and db) makes testing difficult.",
+            "suggestion": "Use constructor injection: constructor(private searchService: SearchService, private db: Database) {}. This improves testability and follows SOLID principles."
+          },
+          {
+            "line": 1,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "Missing comprehensive JSDoc documentation. While basic comments exist, they lack parameter descriptions, return types, and error conditions.",
+            "suggestion": "Add detailed JSDoc: /** * Handle search requests * @param req - Express request with query.q (search term) * @param res - Express response * @returns JSON array of matching todos * @throws 500 if search fails */"
+          },
+          {
+            "line": 50,
+            "severity": "low",
+            "category": "style",
+            "description": "Inconsistent response format. The search method wraps errors in an object, but advancedSearch returns results directly without consistent structure.",
+            "suggestion": "Use a consistent response format: res.json({ success: true, data: results, pagination: { limit, offset, total } }); for all endpoints."
+          }
+        ],
+        "overallScore": 0,
+        "summary": "CRITICAL ISSUES FOUND: This code has severe security vulnerabilities including SQL injection (line 40) and multiple authentication bypasses that pose immediate security risks. The file contains 4 critical issues (SQL injection, missing error handling, authentication gaps), 6 high-severity problems (exposed error details, missing input validation, no rate limiting, no pagination), 7 medium-severity concerns (data exposure, inefficient queries, parameter ordering bugs), and 6 low-severity items (unused parameters, style inconsistencies). Score: 0 (minimum). IMMEDIATE ACTION REQUIRED: Fix SQL injection and authentication issues before deployment."
+      },
+      "testCoverage": {
+        "file": "src/controllers/searchController.ts",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "function",
+            "location": "SearchController.search",
+            "priority": "critical",
+            "reasoning": "Core search functionality with security issues: no input validation, exposing internal error details, and potential injection risks. This is user-facing API code.",
+            "suggestedTest": "Test search() with valid query and userId, verify results are returned. Test with missing/empty query parameter. Test with undefined userId. Test error handling when searchTodos throws an error. Test that error messages don't expose sensitive internal details."
+          },
+          {
+            "type": "edge-case",
+            "location": "SearchController.search - line 13: query parameter",
+            "priority": "critical",
+            "reasoning": "No validation on query parameter - could be undefined, null, empty string, or contain malicious input. Missing input sanitization is a security risk.",
+            "suggestedTest": "Test with query=undefined, query='', query=null, query with special characters (%,_,',\"), query with SQL injection attempts, query with extremely long strings (>10000 chars)."
+          },
+          {
+            "type": "edge-case",
+            "location": "SearchController.search - line 14: userId",
+            "priority": "high",
+            "reasoning": "userId could be undefined if user is not authenticated. No check before passing to searchTodos.",
+            "suggestedTest": "Test search() when req.user is undefined. Test when req.user.id is null or invalid type. Verify appropriate error response (401 Unauthorized)."
+          },
+          {
+            "type": "branch",
+            "location": "SearchController.search - line 20: catch block",
+            "priority": "high",
+            "reasoning": "Error handling exposes internal error messages (error.message) which could leak sensitive information. No differentiation between error types.",
+            "suggestedTest": "Test error scenarios: searchTodos throws database error, throws validation error, throws timeout error. Verify generic error message returned to client, internal details logged but not exposed."
+          },
+          {
+            "type": "function",
+            "location": "SearchController.advancedSearch",
+            "priority": "critical",
+            "reasoning": "Contains SQL injection vulnerability (line 40), no input validation, missing pagination, no rate limiting, and no error handling. Extremely dangerous for production.",
+            "suggestedTest": "Test advancedSearch() with valid parameters. Test SQL injection attempts in q parameter. Test with all filter combinations (priority, tags, completed). Test response structure and data sanitization."
+          },
+          {
+            "type": "edge-case",
+            "location": "SearchController.advancedSearch - line 40: SQL injection vulnerability",
+            "priority": "critical",
+            "reasoning": "Direct string interpolation of user input into SQL query allows SQL injection attacks. Attacker could extract sensitive data, modify records, or drop tables.",
+            "suggestedTest": "Test with q=\"'; DROP TABLE todos; --\". Test with q=\"' OR '1'='1\". Test with q containing UNION SELECT statements. Verify all inputs are parameterized and injection attempts fail safely."
+          },
+          {
+            "type": "branch",
+            "location": "SearchController.advancedSearch - line 39: if (q) block",
+            "priority": "critical",
+            "reasoning": "Conditional SQL building with unsafe string concatenation. Branch not covered for injection scenarios.",
+            "suggestedTest": "Test when q is provided vs not provided. Test with q='' (empty string - truthy check). Test with q='0' (falsy value but valid search)."
+          },
+          {
+            "type": "branch",
+            "location": "SearchController.advancedSearch - line 43: if (priority) block",
+            "priority": "high",
+            "reasoning": "Priority filter applied conditionally but no validation on priority value type or range.",
+            "suggestedTest": "Test with priority='high', priority='low', priority='medium'. Test with invalid priority values (999, 'invalid', null, undefined, []). Test with multiple priority values."
+          },
+          {
+            "type": "edge-case",
+            "location": "SearchController.advancedSearch - tags parameter",
+            "priority": "high",
+            "reasoning": "Tags parameter extracted but never used in the query - dead code or incomplete implementation.",
+            "suggestedTest": "Test that tags parameter is properly validated and implemented. Test with tags=['work','personal'], tags=[], tags='invalid-type', tags=undefined."
+          },
+          {
+            "type": "edge-case",
+            "location": "SearchController.advancedSearch - completed parameter",
+            "priority": "high",
+            "reasoning": "Completed parameter extracted but never used - incomplete implementation or dead code.",
+            "suggestedTest": "Test that completed parameter filters results correctly. Test with completed='true', completed='false', completed=undefined, completed='invalid'."
+          },
+          {
+            "type": "edge-case",
+            "location": "SearchController.advancedSearch - missing pagination",
+            "priority": "high",
+            "reasoning": "No limit on result set size could cause memory issues, performance degradation, or DoS with large datasets.",
+            "suggestedTest": "Test with dataset of 10,000+ todos. Verify pagination parameters (page, limit) are supported. Test default limit is reasonable (e.g., 50-100). Test maximum limit cap."
+          },
+          {
+            "type": "edge-case",
+            "location": "SearchController.advancedSearch - no error handling",
+            "priority": "critical",
+            "reasoning": "No try-catch block means unhandled errors will crash the application or expose stack traces.",
+            "suggestedTest": "Test when db.query throws error (connection failure, syntax error, timeout). Verify appropriate error response (500) with safe error message. Test that app doesn't crash."
+          },
+          {
+            "type": "edge-case",
+            "location": "SearchController.advancedSearch - userId validation",
+            "priority": "critical",
+            "reasoning": "userId used directly in query without validation. Could be undefined, allowing unauthorized access to all todos.",
+            "suggestedTest": "Test when req.user is undefined (unauthenticated request). Test with userId=null. Verify 401 response for missing user. Test SQL query only returns todos for authenticated user."
+          },
+          {
+            "type": "class",
+            "location": "SearchController constructor",
+            "priority": "medium",
+            "reasoning": "No explicit constructor defined. Dependencies (db, searchTodos) should be injected for testability.",
+            "suggestedTest": "Test SearchController instantiation. Mock dependencies (db connection, searchTodos service). Verify dependency injection works correctly for testing isolation."
+          },
+          {
+            "type": "edge-case",
+            "location": "Both methods - Response headers",
+            "priority": "medium",
+            "reasoning": "No security headers set (Content-Type, X-Content-Type-Options, etc.). No rate limiting headers.",
+            "suggestedTest": "Test that appropriate Content-Type header is set (application/json). Test security headers are present. Test rate limit headers when implemented."
+          },
+          {
+            "type": "edge-case",
+            "location": "Both methods - Request validation middleware",
+            "priority": "high",
+            "reasoning": "No authentication/authorization middleware verification. Methods assume req.user exists without checking.",
+            "suggestedTest": "Test that authentication middleware is required. Test that unauthenticated requests return 401. Test that authenticated users can only search their own todos."
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "CRITICAL: Zero test coverage for security-critical controller with SQL injection vulnerability, missing input validation, and poor error handling. The advancedSearch method has a critical SQL injection flaw (line 40) that allows arbitrary SQL execution. No tests exist for authentication, authorization, input validation, error handling, or edge cases. Immediate action required before production deployment."
+      },
+      "refactorings": {
+        "file": "src/controllers/searchController.ts",
+        "suggestions": [
+          {
+            "type": "extract-function",
+            "location": "SearchController.search method, lines 11-16",
+            "impact": "high",
+            "description": "Extract input validation and sanitization into a dedicated function to prevent injection attacks and ensure data integrity across all search methods.",
+            "before": "async search(req: Request, res: Response) {\n  try {\n    const query = req.query.q as string;\n    const userId = req.user?.id;\n    \n    // Missing input validation - security issue\n    const results = await searchTodos(query, userId);",
+            "after": "private validateSearchInput(query: unknown, userId: unknown): { query: string; userId: string } {\n  if (!userId) {\n    throw new ValidationError('User ID is required');\n  }\n  if (!query || typeof query !== 'string') {\n    throw new ValidationError('Valid search query is required');\n  }\n  if (query.length > 500) {\n    throw new ValidationError('Search query too long');\n  }\n  return { query: query.trim(), userId: String(userId) };\n}\n\nasync search(req: Request, res: Response) {\n  try {\n    const { query, userId } = this.validateSearchInput(req.query.q, req.user?.id);\n    const results = await searchTodos(query, userId);",
+            "benefits": "Prevents injection attacks, centralizes validation logic for reuse, improves type safety, makes security requirements explicit, enables easier testing of validation rules."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "SearchController class, both methods",
+            "impact": "high",
+            "description": "Implement proper error handling middleware pattern instead of exposing internal error details. Use error types and sanitized responses.",
+            "before": "async search(req: Request, res: Response) {\n  try {\n    // ... logic\n  } catch (error) {\n    // Poor error handling - exposing internal details\n    res.status(500).json({ error: error.message });\n  }\n}",
+            "after": "async search(req: Request, res: Response) {\n  try {\n    const { query, userId } = this.validateSearchInput(req.query.q, req.user?.id);\n    const results = await searchTodos(query, userId);\n    res.json({ data: results, count: results.length });\n  } catch (error) {\n    this.handleError(error, res);\n  }\n}\n\nprivate handleError(error: unknown, res: Response): void {\n  if (error instanceof ValidationError) {\n    res.status(400).json({ error: 'Invalid request', message: error.message });\n  } else if (error instanceof NotFoundError) {\n    res.status(404).json({ error: 'Resource not found' });\n  } else {\n    res.status(500).json({ error: 'Internal server error' });\n  }\n}",
+            "benefits": "Prevents information leakage, provides consistent error responses, enables proper HTTP status codes, improves security posture, easier to add logging/monitoring."
+          },
+          {
+            "type": "extract-function",
+            "location": "SearchController.advancedSearch method, lines 35-46",
+            "impact": "high",
+            "description": "Extract SQL query building into a secure query builder function using parameterized queries to prevent SQL injection vulnerabilities.",
+            "before": "let sql = 'SELECT * FROM todos WHERE user_id = ?';\nconst params = [userId];\n\n// SQL injection vulnerability!\nif (q) {\n  sql += ` AND (title LIKE '%${q}%' OR description LIKE '%${q}%')`;\n}\n\nif (priority) {\n  params.push(priority);\n  sql += ' AND priority = ?';\n}",
+            "after": "private buildSearchQuery(filters: SearchFilters): { sql: string; params: any[] } {\n  const conditions = ['user_id = ?'];\n  const params = [filters.userId];\n\n  if (filters.query) {\n    conditions.push('(title LIKE ? OR description LIKE ?)');\n    params.push(`%${filters.query}%`, `%${filters.query}%`);\n  }\n\n  if (filters.priority) {\n    conditions.push('priority = ?');\n    params.push(filters.priority);\n  }\n\n  const sql = `SELECT * FROM todos WHERE ${conditions.join(' AND ')} LIMIT ? OFFSET ?`;\n  params.push(filters.limit || 50, filters.offset || 0);\n  \n  return { sql, params };\n}",
+            "benefits": "Eliminates SQL injection vulnerability, enables proper parameterization, adds pagination support, makes query building testable, improves maintainability for complex queries."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "SearchController.advancedSearch method",
+            "impact": "high",
+            "description": "Implement pagination to prevent performance issues and add rate limiting decorator to protect against abuse.",
+            "before": "async advancedSearch(req: Request, res: Response) {\n  const { q, priority, tags, completed } = req.query;\n  const userId = req.user?.id;\n  \n  // No rate limiting - performance issue\n  // Missing pagination - could return thousands of records\n  const results = await db.query(sql, params);\n  res.json(results);\n}",
+            "after": "@RateLimit({ maxRequests: 10, windowMs: 60000 })\nasync advancedSearch(req: Request, res: Response) {\n  try {\n    const filters = this.parseSearchFilters(req.query, req.user?.id);\n    const { sql, params } = this.buildSearchQuery(filters);\n    \n    const results = await db.query(sql, params);\n    const total = await this.getSearchCount(filters);\n    \n    res.json({\n      data: results,\n      pagination: {\n        page: Math.floor(filters.offset / filters.limit) + 1,\n        pageSize: filters.limit,\n        total,\n        hasMore: filters.offset + results.length < total\n      }\n    });\n  } catch (error) {\n    this.handleError(error, res);\n  }\n}",
+            "benefits": "Prevents server overload from large result sets, protects against abuse through rate limiting, improves user experience with paginated results, enables better API scalability."
+          },
+          {
+            "type": "extract-function",
+            "location": "SearchController.advancedSearch method, line 30",
+            "impact": "medium",
+            "description": "Extract filter parsing and validation into a typed function to ensure type safety and reusability.",
+            "before": "async advancedSearch(req: Request, res: Response) {\n  const { q, priority, tags, completed } = req.query;\n  const userId = req.user?.id;",
+            "after": "private parseSearchFilters(query: any, userId: unknown): SearchFilters {\n  const validated = this.validateSearchInput(query.q, userId);\n  \n  return {\n    query: validated.query,\n    userId: validated.userId,\n    priority: this.validatePriority(query.priority),\n    tags: this.validateTags(query.tags),\n    completed: query.completed === 'true',\n    limit: Math.min(parseInt(query.limit) || 50, 100),\n    offset: parseInt(query.offset) || 0\n  };\n}\n\nasync advancedSearch(req: Request, res: Response) {\n  try {\n    const filters = this.parseSearchFilters(req.query, req.user?.id);\n    // ... rest of logic\n  }\n}",
+            "benefits": "Provides type safety for filters, centralizes validation logic, prevents invalid data from reaching database layer, makes filter handling testable, improves code readability."
+          },
+          {
+            "type": "modernize",
+            "location": "SearchController class structure",
+            "impact": "medium",
+            "description": "Modernize the controller to use dependency injection for database access and search utilities, improving testability and following SOLID principles.",
+            "before": "export class SearchController {\n  async search(req: Request, res: Response) {\n    const results = await searchTodos(query, userId);\n    res.json(results);\n  }\n  \n  async advancedSearch(req: Request, res: Response) {\n    const results = await db.query(sql, params);\n  }\n}",
+            "after": "export class SearchController {\n  constructor(\n    private readonly searchService: SearchService,\n    private readonly logger: Logger\n  ) {}\n  \n  async search(req: Request, res: Response) {\n    try {\n      const { query, userId } = this.validateSearchInput(req.query.q, req.user?.id);\n      const results = await this.searchService.searchTodos(query, userId);\n      \n      this.logger.info('Search performed', { userId, query: query.substring(0, 50) });\n      res.json({ data: results, count: results.length });\n    } catch (error) {\n      this.handleError(error, res);\n    }\n  }\n}",
+            "benefits": "Enables easy mocking for unit tests, decouples controller from implementation details, allows for service layer business logic, improves maintainability, follows dependency inversion principle."
+          },
+          {
+            "type": "simplify",
+            "location": "SearchController.search method, line 19",
+            "impact": "medium",
+            "description": "Add response filtering to prevent exposing sensitive data and provide structured API responses.",
+            "before": "const results = await searchTodos(query, userId);\n\n// Returning potentially sensitive data without filtering\nres.json(results);",
+            "after": "const results = await this.searchService.searchTodos(query, userId);\nconst sanitized = results.map(todo => ({\n  id: todo.id,\n  title: todo.title,\n  description: todo.description,\n  priority: todo.priority,\n  completed: todo.completed,\n  createdAt: todo.createdAt\n}));\n\nres.json({ data: sanitized, count: sanitized.length });",
+            "benefits": "Prevents accidental exposure of sensitive fields, provides consistent API response structure, makes data contract explicit, easier to version and document API, improves security."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "Entire SearchController class",
+            "impact": "medium",
+            "description": "Add proper TypeScript interfaces for type safety and better IDE support.",
+            "before": "export class SearchController {\n  async search(req: Request, res: Response) {\n    const query = req.query.q as string;",
+            "after": "interface SearchFilters {\n  query: string;\n  userId: string;\n  priority?: 'low' | 'medium' | 'high';\n  tags?: string[];\n  completed?: boolean;\n  limit: number;\n  offset: number;\n}\n\ninterface TodoResponse {\n  id: string;\n  title: string;\n  description: string;\n  priority: string;\n  completed: boolean;\n  createdAt: Date;\n}\n\nexport class SearchController {\n  async search(req: Request<{}, {}, {}, { q: string }>, res: Response) {",
+            "benefits": "Provides compile-time type checking, improves IDE autocomplete and refactoring support, documents expected data structures, reduces runtime errors, makes API contract explicit."
+          }
+        ],
+        "summary": "The SearchController has 8 critical refactoring opportunities addressing security vulnerabilities, performance issues, and code quality: SQL injection vulnerability must be fixed with parameterized queries, input validation needed to prevent attacks, error handling exposing internal details, missing pagination and rate limiting causing performance risks. Medium-priority improvements include extracting validation, query building, and filter parsing into reusable functions, implementing dependency injection, adding TypeScript interfaces, and filtering sensitive data. These refactorings will improve type safety, testability, performance, and maintainability while reducing technical debt."
+      }
+    },
+    {
+      "file": "src/utils/searchFilter.ts",
+      "codeQuality": {
+        "file": "src/utils/searchFilter.ts",
+        "issues": [
+          {
+            "line": 7,
+            "severity": "high",
+            "category": "security",
+            "description": "Missing input validation for query and userId parameters. Empty strings, null, or malicious inputs could cause unexpected behavior or security issues.",
+            "suggestion": "Add input validation to check for null/undefined/empty values and sanitize inputs. Example: if (!query || !userId) throw new Error('Invalid parameters');"
+          },
+          {
+            "line": 8,
+            "severity": "critical",
+            "category": "performance",
+            "description": "Fetching all todos from database and filtering in-memory is extremely inefficient. This creates an O(n) memory and performance overhead that scales poorly with data size.",
+            "suggestion": "Push the search logic to the database layer using a query with WHERE clause. Example: todoService.searchByQuery(userId, query) that uses SQL LIKE or full-text search."
+          },
+          {
+            "line": 11,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "Potential null reference error when todo.title is null or undefined. No null check before calling toLowerCase().",
+            "suggestion": "Add optional chaining and null coalescing: const titleMatch = todo.title?.toLowerCase().includes(searchText) ?? false;"
+          },
+          {
+            "line": 13,
+            "severity": "low",
+            "category": "performance",
+            "description": "query.toLowerCase() is called once but could be moved outside the filter callback to avoid repeated computation.",
+            "suggestion": "Move 'const searchText = query.toLowerCase();' outside the filter function to line 9, calculating it once before the filter."
+          },
+          {
+            "line": 25,
+            "severity": "high",
+            "category": "maintainability",
+            "description": "Using 'any' type for filters parameter completely bypasses TypeScript type safety, making the code error-prone and harder to maintain.",
+            "suggestion": "Define a proper interface: interface TodoFilters { priority?: string; completed?: boolean; tags?: string[]; } and use it as the type."
+          },
+          {
+            "line": 27,
+            "severity": "critical",
+            "category": "performance",
+            "description": "Fetching all todos and filtering in-memory. Multiple sequential filter operations create unnecessary iterations (potentially O(n) × number of filters).",
+            "suggestion": "Implement database-level filtering with WHERE clauses to reduce data transfer and improve performance: todoService.getByUserIdWithFilters(userId, filters)."
+          },
+          {
+            "line": 30,
+            "severity": "medium",
+            "category": "maintainability",
+            "description": "Duplicated filtering pattern across searchTodos and filterTodos functions. Violates DRY principle.",
+            "suggestion": "Extract common filtering logic into a shared function or move all filtering to the database/service layer."
+          },
+          {
+            "line": 32,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "No validation that filters.priority contains valid values. Invalid priority values could pass through silently.",
+            "suggestion": "Validate filter values against allowed enum/constants. Example: if (filters.priority && !VALID_PRIORITIES.includes(filters.priority)) throw new Error('Invalid priority');"
+          },
+          {
+            "line": 36,
+            "severity": "low",
+            "category": "style",
+            "description": "Inconsistent filtering pattern - checking undefined for completed but not for priority. Inconsistent conditional logic.",
+            "suggestion": "Use consistent null/undefined checks across all filter conditions for maintainability."
+          },
+          {
+            "line": 40,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "No validation that t.tags exists before calling includes(). Could throw error if tags property is undefined on a todo.",
+            "suggestion": "Add null safety: results = results.filter(t => t.tags && filters.tags.some((tag: string) => t.tags.includes(tag)));"
+          },
+          {
+            "line": 42,
+            "severity": "low",
+            "category": "style",
+            "description": "Explicit type annotation (tag: string) in arrow function is unnecessary when filters has proper typing.",
+            "suggestion": "Remove explicit type annotation once proper TodoFilters interface is defined, or keep for clarity if preferred."
+          },
+          {
+            "line": 1,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "No error handling for async operations. If todoService.getByUserId fails, unhandled promise rejection could crash the application.",
+            "suggestion": "Wrap async calls in try-catch blocks and handle errors appropriately, or document that error handling is caller's responsibility."
+          },
+          {
+            "line": 23,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "Function complexity could be reduced by delegating business logic to service layer following separation of concerns principle.",
+            "suggestion": "Consider moving filtering logic to todoService layer where it can be combined with data access for better performance and testability."
+          },
+          {
+            "line": 7,
+            "severity": "low",
+            "category": "security",
+            "description": "No rate limiting or query length validation. Extremely long search queries could cause performance degradation or DoS.",
+            "suggestion": "Add query length validation: if (query.length > 500) throw new Error('Query too long'). Consider implementing rate limiting at API level."
+          }
+        ],
+        "overallScore": 23,
+        "summary": "The file has critical performance issues due to in-memory filtering instead of database queries, high-severity security concerns from missing input validation, and poor type safety using 'any'. Major refactoring needed to push filtering to database layer, add proper TypeScript interfaces, implement input validation, and add null safety checks. Score: 23/100."
+      },
+      "testCoverage": {
+        "file": "src/utils/searchFilter.ts",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "function",
+            "location": "searchTodos",
+            "priority": "critical",
+            "reasoning": "Core search functionality with no input validation. Missing tests for empty queries, null/undefined inputs, and case-sensitivity handling. This is user-facing functionality that directly impacts search accuracy.",
+            "suggestedTest": "Test searchTodos with: (1) empty string query, (2) null/undefined query, (3) special characters in query, (4) query matching title only, (5) query matching description only, (6) query matching both, (7) no matches scenario, (8) case-insensitive matching"
+          },
+          {
+            "type": "edge-case",
+            "location": "searchTodos - line 14: todo.description?.toLowerCase()",
+            "priority": "high",
+            "reasoning": "Optional chaining on description field suggests it can be null/undefined. Need to test todos with missing descriptions to ensure no runtime errors.",
+            "suggestedTest": "Test searchTodos with todos that have: (1) null description, (2) undefined description, (3) empty string description, (4) query matching only description when title doesn't match"
+          },
+          {
+            "type": "edge-case",
+            "location": "searchTodos - input validation",
+            "priority": "critical",
+            "reasoning": "Comment indicates missing input validation. No validation for query or userId parameters. Could cause errors with invalid inputs or security issues.",
+            "suggestedTest": "Test searchTodos with: (1) empty userId, (2) null userId, (3) undefined userId, (4) empty query string, (5) very long query strings (>1000 chars), (6) query with SQL injection attempts"
+          },
+          {
+            "type": "function",
+            "location": "filterTodos",
+            "priority": "critical",
+            "reasoning": "Core filtering functionality with poor typing ('any' type). No tests for multiple filter combinations, edge cases, or invalid filter values. This is critical business logic.",
+            "suggestedTest": "Test filterTodos with: (1) single filter (priority only), (2) single filter (completed only), (3) single filter (tags only), (4) multiple filters combined, (5) empty filters object, (6) no matching results, (7) all todos matching"
+          },
+          {
+            "type": "branch",
+            "location": "filterTodos - line 32: if (filters.priority)",
+            "priority": "high",
+            "reasoning": "Priority filter branch untested. Need to verify correct filtering by priority values and handling of invalid priority values.",
+            "suggestedTest": "Test filterTodos priority filter with: (1) valid priority value, (2) invalid priority value, (3) priority not matching any todos, (4) null/undefined priority, (5) empty string priority"
+          },
+          {
+            "type": "branch",
+            "location": "filterTodos - line 36: if (filters.completed !== undefined)",
+            "priority": "high",
+            "reasoning": "Completed filter uses strict undefined check, allowing false/true values. Need to test boolean edge cases.",
+            "suggestedTest": "Test filterTodos completed filter with: (1) completed=true, (2) completed=false, (3) completed=null, (4) completed=undefined, (5) completed with truthy/falsy non-boolean values"
+          },
+          {
+            "type": "branch",
+            "location": "filterTodos - line 40: if (filters.tags && filters.tags.length > 0)",
+            "priority": "high",
+            "reasoning": "Tags filter has compound condition checking existence and length. Need to test array edge cases and tag matching logic.",
+            "suggestedTest": "Test filterTodos tags filter with: (1) single tag match, (2) multiple tags (OR logic), (3) empty tags array, (4) null tags, (5) undefined tags, (6) tags with no matches, (7) todos with multiple tags, (8) todos with no tags"
+          },
+          {
+            "type": "edge-case",
+            "location": "filterTodos - filters parameter typing",
+            "priority": "critical",
+            "reasoning": "Parameter uses 'any' type which bypasses TypeScript safety. No runtime validation means unexpected properties or malformed data could cause errors.",
+            "suggestedTest": "Test filterTodos with: (1) null filters, (2) undefined filters, (3) empty object filters, (4) filters with unexpected properties, (5) filters with wrong value types (string instead of boolean)"
+          },
+          {
+            "type": "edge-case",
+            "location": "filterTodos - line 42: filters.tags.some((tag: string) => t.tags.includes(tag))",
+            "priority": "high",
+            "reasoning": "Assumes t.tags exists and is an array. If a todo has null/undefined tags, this will throw a runtime error.",
+            "suggestedTest": "Test filterTodos tags matching with: (1) todo with null tags property, (2) todo with undefined tags property, (3) todo with empty tags array, (4) todo with non-array tags value"
+          },
+          {
+            "type": "edge-case",
+            "location": "searchTodos and filterTodos - async error handling",
+            "priority": "high",
+            "reasoning": "Both functions call todoService.getByUserId() without try-catch. No tests for service failures, network errors, or database unavailability.",
+            "suggestedTest": "Test both functions with: (1) todoService.getByUserId throwing an error, (2) todoService returning null, (3) todoService returning undefined, (4) todoService timing out, (5) todoService returning empty array"
+          },
+          {
+            "type": "edge-case",
+            "location": "searchTodos and filterTodos - large dataset performance",
+            "priority": "medium",
+            "reasoning": "Comment indicates inefficient filtering done in-memory. Should test performance with large datasets to validate the concern.",
+            "suggestedTest": "Test performance with: (1) 1000+ todos, (2) 10,000+ todos, (3) todos with very long titles/descriptions, (4) measure execution time to establish baseline for future optimization"
+          },
+          {
+            "type": "edge-case",
+            "location": "filterTodos - filter combination logic",
+            "priority": "high",
+            "reasoning": "Multiple filters are applied sequentially with AND logic. Need to verify the order doesn't matter and all combinations work correctly.",
+            "suggestedTest": "Test filterTodos with all filter combinations: (1) priority + completed, (2) priority + tags, (3) completed + tags, (4) all three filters together, (5) verify AND logic (todos must match all specified filters)"
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "No test coverage exists for src/utils/searchFilter.ts. Critical gaps include: (1) No input validation testing for both functions despite code comments indicating missing validation, (2) No edge case testing for null/undefined values in optional fields (description, tags), (3) No error handling tests for async service calls, (4) No testing of filter combinations or boundary conditions, (5) Poor type safety with 'any' type on filters parameter creates untestable runtime risks. Priority: Implement input validation tests and null/undefined handling tests immediately."
+      },
+      "refactorings": {
+        "file": "src/utils/searchFilter.ts",
+        "suggestions": [
+          {
+            "type": "pattern-improvement",
+            "location": "filterTodos function, line 23-25",
+            "impact": "high",
+            "description": "Replace 'any' type with a proper TypeScript interface for the filters parameter to ensure type safety and better IDE support.",
+            "before": "export async function filterTodos(\n  userId: string,\n  filters: any  // Poor typing - should use proper interface\n): Promise<Todo[]> {",
+            "after": "interface TodoFilters {\n  priority?: string;\n  completed?: boolean;\n  tags?: string[];\n}\n\nexport async function filterTodos(\n  userId: string,\n  filters: TodoFilters\n): Promise<Todo[]> {",
+            "benefits": "Provides compile-time type checking, better IDE autocomplete, prevents runtime errors from invalid filter properties, self-documenting code, and enforces contract between caller and function."
+          },
+          {
+            "type": "extract-function",
+            "location": "searchTodos function, lines 12-16",
+            "impact": "medium",
+            "description": "Extract the text matching logic into a separate reusable function to improve testability and reduce duplication with potential future search features.",
+            "before": "return allTodos.filter(todo => {\n  const searchText = query.toLowerCase();\n  const titleMatch = todo.title.toLowerCase().includes(searchText);\n  const descMatch = todo.description?.toLowerCase().includes(searchText);\n  return titleMatch || descMatch;\n});",
+            "after": "function matchesTodo(todo: Todo, searchText: string): boolean {\n  const normalizedSearch = searchText.toLowerCase();\n  const titleMatch = todo.title.toLowerCase().includes(normalizedSearch);\n  const descMatch = todo.description?.toLowerCase().includes(normalizedSearch);\n  return titleMatch || descMatch;\n}\n\nreturn allTodos.filter(todo => matchesTodo(todo, query));",
+            "benefits": "Enables unit testing of search logic independently, improves code reusability, makes the filter callback more readable, and allows easier extension of search criteria in the future."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "searchTodos function, line 8",
+            "impact": "medium",
+            "description": "Add input validation for query and userId parameters to prevent errors and improve robustness.",
+            "before": "export async function searchTodos(query: string, userId: string): Promise<Todo[]> {\n  // Missing input validation\n  const allTodos = await todoService.getByUserId(userId);",
+            "after": "export async function searchTodos(query: string, userId: string): Promise<Todo[]> {\n  if (!query || query.trim().length === 0) {\n    throw new Error('Search query cannot be empty');\n  }\n  if (!userId || userId.trim().length === 0) {\n    throw new Error('User ID is required');\n  }\n  \n  const allTodos = await todoService.getByUserId(userId);",
+            "benefits": "Prevents unnecessary database calls with invalid inputs, provides clear error messages for debugging, improves API reliability, and enforces preconditions early in the function."
+          },
+          {
+            "type": "extract-function",
+            "location": "filterTodos function, lines 32-43",
+            "impact": "high",
+            "description": "Extract individual filter predicates into separate, composable functions to enable better testing, reusability, and adherence to Single Responsibility Principle.",
+            "before": "if (filters.priority) {\n  results = results.filter(t => t.priority === filters.priority);\n}\n\nif (filters.completed !== undefined) {\n  results = results.filter(t => t.completed === filters.completed);\n}\n\nif (filters.tags && filters.tags.length > 0) {\n  results = results.filter(t =>\n    filters.tags.some((tag: string) => t.tags.includes(tag))\n  );\n}",
+            "after": "function filterByPriority(todos: Todo[], priority: string): Todo[] {\n  return todos.filter(t => t.priority === priority);\n}\n\nfunction filterByCompleted(todos: Todo[], completed: boolean): Todo[] {\n  return todos.filter(t => t.completed === completed);\n}\n\nfunction filterByTags(todos: Todo[], tags: string[]): Todo[] {\n  return todos.filter(t => tags.some(tag => t.tags.includes(tag)));\n}\n\n// Apply filters\nif (filters.priority) {\n  results = filterByPriority(results, filters.priority);\n}\nif (filters.completed !== undefined) {\n  results = filterByCompleted(results, filters.completed);\n}\nif (filters.tags?.length > 0) {\n  results = filterByTags(results, filters.tags);\n}",
+            "benefits": "Each filter can be tested independently, filters can be reused in other parts of the codebase, easier to add new filter types, improves code organization, and enables functional composition patterns."
+          },
+          {
+            "type": "simplify",
+            "location": "filterTodos function, lines 27-43",
+            "impact": "medium",
+            "description": "Simplify the chained filtering by using a single reduce operation or functional composition to avoid multiple array iterations and intermediate variables.",
+            "before": "let results = todos;\n\nif (filters.priority) {\n  results = results.filter(t => t.priority === filters.priority);\n}\n\nif (filters.completed !== undefined) {\n  results = results.filter(t => t.completed === filters.completed);\n}\n\nif (filters.tags && filters.tags.length > 0) {\n  results = results.filter(t =>\n    filters.tags.some((tag: string) => t.tags.includes(tag))\n  );\n}\n\nreturn results;",
+            "after": "return todos.filter(todo => {\n  const matchesPriority = !filters.priority || todo.priority === filters.priority;\n  const matchesCompleted = filters.completed === undefined || todo.completed === filters.completed;\n  const matchesTags = !filters.tags?.length || filters.tags.some(tag => todo.tags.includes(tag));\n  \n  return matchesPriority && matchesCompleted && matchesTags;\n});",
+            "benefits": "Reduces from multiple array iterations (O(n * m)) to a single pass (O(n)), eliminates mutable variable, more performant for large datasets, and functional programming style improves predictability."
+          },
+          {
+            "type": "modernize",
+            "location": "searchTodos function, lines 12-13",
+            "impact": "low",
+            "description": "Move the lowercase normalization outside the filter loop to avoid redundant computation on every iteration.",
+            "before": "return allTodos.filter(todo => {\n  const searchText = query.toLowerCase();\n  const titleMatch = todo.title.toLowerCase().includes(searchText);",
+            "after": "const normalizedQuery = query.toLowerCase();\nreturn allTodos.filter(todo => {\n  const titleMatch = todo.title.toLowerCase().includes(normalizedQuery);",
+            "benefits": "Improves performance by avoiding redundant toLowerCase() calls in the loop, reduces computational overhead for large todo lists, and demonstrates understanding of loop optimization principles."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "searchTodos function, lines 9-17",
+            "impact": "high",
+            "description": "The comment indicates this should use database-level filtering instead of fetching all todos and filtering in memory. This is a critical performance issue for scalability.",
+            "before": "const allTodos = await todoService.getByUserId(userId);\n\n// Inefficient filtering - should use database query\nreturn allTodos.filter(todo => {\n  const searchText = query.toLowerCase();\n  // ... filtering logic\n});",
+            "after": "// Recommendation: Add database-level search to todoService\n// await todoService.searchTodos(userId, query);\n\n// If service supports it, use:\nreturn await todoService.searchByText(userId, query);\n\n// Or add to todoService interface:\n// searchByText(userId: string, query: string): Promise<Todo[]>",
+            "benefits": "Dramatically improves performance and scalability by reducing data transfer, leverages database indexing and optimized query execution, reduces memory footprint in the application, and follows best practices for data access patterns. Critical for production systems with large datasets."
+          }
+        ],
+        "summary": "The file has 7 significant refactoring opportunities focusing on type safety, performance, and code organization. High-priority items include: (1) replacing 'any' with proper TypeScript interfaces, (2) extracting filter predicates into reusable functions, and (3) implementing database-level filtering instead of in-memory operations. Medium-priority improvements include input validation, extracting search matching logic, and simplifying the chained filter operations. These refactorings will improve type safety, testability, performance, and maintainability while reducing technical debt."
+      }
+    }
+  ],
+  "summary": {
+    "totalFiles": 2,
+    "overallScore": 12,
+    "criticalIssues": 6,
+    "highPriorityTests": 26,
+    "refactoringOpportunities": 15
+  },
+  "recommendations": [
+    {
+      "priority": "critical",
+      "category": "Security",
+      "description": "SQL injection vulnerability in advancedSearch method. The query parameter 'q' is directly interpolated into SQL string using template literals (line 40 of searchController.ts), allowing attackers to execute arbitrary SQL commands. This is an immediate security threat that could lead to data theft, modification, or deletion.",
+      "files": [
+        "src/controllers/searchController.ts"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Security",
+      "description": "Missing authentication checks in both search methods. userId could be undefined if user is not authenticated, potentially allowing unauthorized access to all users' todos or causing database errors.",
+      "files": [
+        "src/controllers/searchController.ts"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Error Handling",
+      "description": "No error handling in advancedSearch method. Missing try-catch blocks for async database operations risk unhandled promise rejections and application crashes.",
+      "files": [
+        "src/controllers/searchController.ts"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Performance",
+      "description": "In-memory filtering instead of database queries. Both searchTodos and filterTodos fetch all user todos and filter in-memory, creating severe performance bottlenecks and scalability issues for large datasets.",
+      "files": [
+        "src/utils/searchFilter.ts"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Testing",
+      "description": "Zero test coverage for security-critical code. No tests exist for SQL injection protection, authentication, input validation, or error handling in either file. This is particularly dangerous given the SQL injection vulnerability.",
+      "files": [
+        "src/controllers/searchController.ts",
+        "src/utils/searchFilter.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Security",
+      "description": "Missing input validation across all functions. Query parameters, userId, and filter values are used without validation or sanitization, creating security risks and potential for unexpected behavior.",
+      "files": [
+        "src/controllers/searchController.ts",
+        "src/utils/searchFilter.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Security",
+      "description": "Poor error handling exposing internal details. Error messages are returned directly to clients (error.message), potentially leaking sensitive information about system architecture, database structure, or internal logic.",
+      "files": [
+        "src/controllers/searchController.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Performance",
+      "description": "No rate limiting or pagination implemented. Search endpoints could be abused for DoS attacks, and queries could return thousands of records causing memory exhaustion and poor performance.",
+      "files": [
+        "src/controllers/searchController.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Type Safety",
+      "description": "Using 'any' type for filters parameter completely bypasses TypeScript type safety. This makes the code error-prone, harder to maintain, and eliminates compile-time error detection.",
+      "files": [
+        "src/utils/searchFilter.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Bug Risk",
+      "description": "Multiple null reference risks. Missing null checks before calling methods on potentially undefined properties (todo.title, todo.tags) could cause runtime errors.",
+      "files": [
+        "src/utils/searchFilter.ts"
+      ]
+    }
+  ],
+  "metadata": {
+    "analyzedAt": "2026-09-27T12:00:00.000Z",
+    "duration": 45000,
+    "agentVersions": {
+      "code-quality-analyzer": "1.0.0",
+      "test-coverage-analyzer": "1.0.0",
+      "refactoring-suggester": "1.0.0"
+    }
+  }
+}

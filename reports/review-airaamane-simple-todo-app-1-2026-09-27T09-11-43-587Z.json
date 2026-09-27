@@ -1,0 +1,551 @@
+{
+  "pullRequest": {
+    "owner": "airaamane",
+    "repo": "simple-todo-app",
+    "number": 1
+  },
+  "fileReviews": [
+    {
+      "file": "src/models/todo.ts",
+      "codeQuality": {
+        "file": "src/models/todo.ts",
+        "issues": [
+          {
+            "line": 39,
+            "severity": "critical",
+            "category": "security",
+            "description": "The generateId() function uses Math.random() and Date.now(), which can produce colliding IDs in high-concurrency scenarios or distributed systems. This is not cryptographically secure and predictable.",
+            "suggestion": "Use a proper UUID library like crypto.randomUUID() (Node.js 14.17+) or the uuid package. Example: import { v4 as uuidv4 } from 'uuid'; return uuidv4();"
+          },
+          {
+            "line": 39,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "substr() is deprecated in favor of substring() or slice(). This may cause issues in future JavaScript versions.",
+            "suggestion": "Replace substr(2, 9) with substring(2, 11) or slice(2, 11)."
+          },
+          {
+            "line": 39,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "In high-frequency calls (multiple todos created in the same millisecond), Date.now() will return the same value, increasing collision risk significantly.",
+            "suggestion": "Implement a counter-based approach or use a proven UUID generation strategy with guaranteed uniqueness."
+          },
+          {
+            "line": 38,
+            "severity": "medium",
+            "category": "maintainability",
+            "description": "The generateId() function is not exported, making it untestable in isolation and harder to mock in tests.",
+            "suggestion": "Export the function for testability: export function generateId(): string or inject it as a dependency."
+          },
+          {
+            "line": 4,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "The Todo interface lacks JSDoc documentation for individual fields, making it harder for developers to understand field purposes and constraints.",
+            "suggestion": "Add JSDoc comments for each field, especially for priority, tags, and optional fields to clarify their usage."
+          },
+          {
+            "line": 27,
+            "severity": "low",
+            "category": "style",
+            "description": "Optional chaining for options?.description when description is optional in the interface could lead to undefined being explicitly set rather than the field being omitted.",
+            "suggestion": "Consider using conditional assignment: ...(options?.description && { description: options.description }) if you want to omit undefined fields from the object."
+          },
+          {
+            "line": 12,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "The priority type uses string literals. While this is good, there's no runtime validation to ensure values stay within the allowed set.",
+            "suggestion": "Consider creating a Priority enum or const object for better type safety and runtime validation: export const Priority = { LOW: 'low', MEDIUM: 'medium', HIGH: 'high' } as const;"
+          },
+          {
+            "line": 19,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "The createTodo function doesn't validate input parameters (e.g., empty title, invalid userId format).",
+            "suggestion": "Add input validation, especially for title (non-empty string) and userId (valid format). Example: if (!title?.trim()) throw new Error('Title cannot be empty');"
+          },
+          {
+            "line": 33,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "Tags array defaults to empty array, but there's no validation to ensure tags are non-empty strings or follow any format.",
+            "suggestion": "Add validation or sanitization for tags to ensure data quality: filter out empty strings, trim whitespace, or enforce a tag format."
+          },
+          {
+            "line": 1,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "Missing unit tests reference or test file. Models should have comprehensive test coverage.",
+            "suggestion": "Create a corresponding todo.test.ts file to test createTodo(), generateId(), and edge cases."
+          }
+        ],
+        "overallScore": 67,
+        "summary": "The code is functionally sound but has significant issues that need addressing. The most critical concern is the ID generation mechanism using Math.random() and deprecated substr(), which poses security and collision risks. The code lacks input validation and proper error handling. Maintainability could be improved with better documentation, exported helper functions for testing, and runtime validation. The structure is clean and uses TypeScript features effectively, but needs hardening for production use."
+      },
+      "testCoverage": {
+        "file": "src/models/todo.ts",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "function",
+            "location": "createTodo",
+            "priority": "critical",
+            "reasoning": "Core business logic function that creates Todo objects with complex default value handling and optional parameters. This is the primary factory function for the domain model.",
+            "suggestedTest": "Test suite should include: (1) Valid creation with all required fields, (2) Creation with partial options, (3) Creation with all options specified, (4) Verify default values (completed=false, priority='medium', tags=[]), (5) Verify timestamps are set correctly, (6) Verify unique ID generation"
+          },
+          {
+            "type": "edge-case",
+            "location": "createTodo - title parameter",
+            "priority": "high",
+            "reasoning": "Title is a required field but has no validation. Empty strings, whitespace-only strings, or very long strings could cause issues.",
+            "suggestedTest": "Test with edge cases: (1) Empty string '', (2) Whitespace only '   ', (3) Very long title (1000+ chars), (4) Special characters and Unicode, (5) null/undefined (should this be allowed?)"
+          },
+          {
+            "type": "edge-case",
+            "location": "createTodo - userId parameter",
+            "priority": "high",
+            "reasoning": "userId is required but not validated. Invalid user IDs could create orphaned todos or security issues.",
+            "suggestedTest": "Test with: (1) Empty string, (2) null/undefined, (3) Invalid format, (4) SQL injection attempts if stored in DB"
+          },
+          {
+            "type": "edge-case",
+            "location": "createTodo - priority field",
+            "priority": "high",
+            "reasoning": "Priority has a union type constraint ('low' | 'medium' | 'high'). TypeScript won't prevent runtime errors if invalid values are passed from JavaScript or external APIs.",
+            "suggestedTest": "Test: (1) All valid values ('low', 'medium', 'high'), (2) Invalid values ('urgent', 'critical', null), (3) Case sensitivity ('Low', 'MEDIUM'), (4) Default value when not provided"
+          },
+          {
+            "type": "function",
+            "location": "generateId",
+            "priority": "critical",
+            "reasoning": "ID generation is crucial for data integrity. Duplicate IDs would cause serious data corruption. The current implementation using Date.now() and Math.random() has collision risk.",
+            "suggestedTest": "Test: (1) IDs are unique across multiple rapid calls, (2) Format matches expected pattern 'todo_[timestamp]_[random]', (3) No collisions in batch generation (1000+ IDs), (4) IDs are non-empty strings, (5) Consider testing thread safety if used in concurrent environments"
+          },
+          {
+            "type": "edge-case",
+            "location": "generateId - collision risk",
+            "priority": "high",
+            "reasoning": "Using Date.now() + Math.random() can produce collisions if called multiple times in the same millisecond. This is especially risky in loops or concurrent operations.",
+            "suggestedTest": "Test: (1) Generate 10,000 IDs in a tight loop and verify uniqueness, (2) Simulate concurrent generation, (3) Document known limitations of the ID generation approach"
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "CRITICAL: No tests exist for this file. The file contains core domain model logic with a factory function (createTodo) and ID generator (generateId) that are completely untested. Major risks include: (1) ID collision potential in the generateId function using Date.now() + Math.random(), (2) No validation on required fields (title, userId), (3) No validation on constrained types (priority union type), (4) Null coalescing logic untested for edge cases. This is a high-risk module requiring immediate test coverage."
+      },
+      "refactorings": {
+        "file": "src/models/todo.ts",
+        "suggestions": [
+          {
+            "type": "pattern-improvement",
+            "location": "generateId function, lines 38-40",
+            "impact": "high",
+            "description": "The current ID generation using Date.now() and Math.random() is not cryptographically secure and can produce collisions in high-concurrency scenarios. Using a proper UUID library ensures uniqueness.",
+            "before": "function generateId(): string {\n  return `todo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n}",
+            "after": "import { randomUUID } from 'crypto';\n\nfunction generateId(): string {\n  return `todo_${randomUUID()}`;\n}",
+            "benefits": "Guarantees uniqueness across distributed systems, cryptographically secure, industry-standard approach, eliminates potential collision issues, cleaner implementation."
+          },
+          {
+            "type": "modernize",
+            "location": "generateId function, line 39",
+            "impact": "medium",
+            "description": "The substr() method is deprecated. Modern code should use substring() or slice() instead.",
+            "before": "function generateId(): string {\n  return `todo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n}",
+            "after": "function generateId(): string {\n  return `todo_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;\n}",
+            "benefits": "Uses modern JavaScript API, avoids deprecated method warnings, future-proofs the code."
+          },
+          {
+            "type": "simplify",
+            "location": "createTodo function signature, line 21",
+            "impact": "medium",
+            "description": "The complex Partial<Omit<...>> type in the function signature reduces readability. Extract it to a named type for clarity.",
+            "before": "export function createTodo(\n  title: string,\n  userId: string,\n  options?: Partial<Omit<Todo, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'title'>>\n): Todo {",
+            "after": "export type CreateTodoOptions = Partial<Pick<Todo, 'description' | 'completed' | 'priority' | 'tags'>>;\n\nexport function createTodo(\n  title: string,\n  userId: string,\n  options?: CreateTodoOptions\n): Todo {",
+            "benefits": "Improves readability, makes the type reusable, easier to understand what options are available, reduces cognitive load when reading function signatures."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "createTodo function, lines 19-35",
+            "impact": "medium",
+            "description": "The function lacks validation for input parameters. Adding basic validation prevents invalid data from being created.",
+            "before": "export function createTodo(\n  title: string,\n  userId: string,\n  options?: CreateTodoOptions\n): Todo {\n  const now = new Date();\n  return {\n    id: generateId(),\n    title,\n    ...\n  };\n}",
+            "after": "export function createTodo(\n  title: string,\n  userId: string,\n  options?: CreateTodoOptions\n): Todo {\n  if (!title?.trim()) {\n    throw new Error('Title is required and cannot be empty');\n  }\n  if (!userId?.trim()) {\n    throw new Error('UserId is required and cannot be empty');\n  }\n  \n  const now = new Date();\n  return {\n    id: generateId(),\n    title: title.trim(),\n    ...\n  };\n}",
+            "benefits": "Prevents creation of invalid todos, provides clear error messages, ensures data integrity, makes debugging easier, follows fail-fast principle."
+          },
+          {
+            "type": "modernize",
+            "location": "Todo interface, lines 4-13",
+            "impact": "low",
+            "description": "Fields like id, createdAt, and userId should not change after creation. Using readonly enforces immutability at the type level.",
+            "before": "export interface Todo {\n  id: string;\n  createdAt: Date;\n  userId: string;\n  ...\n}",
+            "after": "export interface Todo {\n  readonly id: string;\n  readonly createdAt: Date;\n  readonly userId: string;\n  ...\n}",
+            "benefits": "Provides compile-time safety against accidental mutations, documents intent that certain fields should never change, helps prevent bugs related to modifying immutable data."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "Todo interface priority field, line 12",
+            "impact": "low",
+            "description": "Extract the priority union type so it can be reused elsewhere in the codebase (e.g., for validation, filtering, UI components).",
+            "before": "export interface Todo {\n  priority: 'low' | 'medium' | 'high';\n}",
+            "after": "export type TodoPriority = 'low' | 'medium' | 'high';\n\nexport const TODO_PRIORITIES: readonly TodoPriority[] = ['low', 'medium', 'high'];\n\nexport interface Todo {\n  priority: TodoPriority;\n}",
+            "benefits": "Enables type reuse across the application, provides a constant array for iteration/validation, improves type safety in functions that accept priority parameters, makes it easier to add new priorities in the future."
+          }
+        ],
+        "summary": "The file has 6 refactoring opportunities across modernization, simplification, and pattern improvements. The most critical improvements are using proper UUID generation and adding input validation, which will significantly improve the robustness of the code. The modernization and type extraction suggestions improve code quality and maintainability."
+      }
+    },
+    {
+      "file": "src/services/todoService.ts",
+      "codeQuality": {
+        "file": "src/services/todoService.ts",
+        "issues": [
+          {
+            "line": 6,
+            "severity": "critical",
+            "category": "security",
+            "description": "In-memory storage using Map will lose all data on server restart or crash. No data persistence mechanism exists",
+            "suggestion": "Implement data persistence using a database (e.g., PostgreSQL, MongoDB) or at minimum add file-based persistence with proper error handling and data validation"
+          },
+          {
+            "line": 1,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "Import uses '.js' extension for a TypeScript file, which may cause module resolution issues depending on the TypeScript configuration",
+            "suggestion": "Use '../models/todo' without the extension or ensure tsconfig.json has proper module resolution settings. If using ES modules, verify that the actual compiled output will be .js"
+          },
+          {
+            "line": 32,
+            "severity": "high",
+            "category": "performance",
+            "description": "getByUserId performs O(n) linear scan through all todos to filter by userId. This will scale poorly as the number of todos grows",
+            "suggestion": "Maintain a secondary index Map<userId, Set<todoId>> to enable O(1) lookups by userId, or use a database with proper indexing"
+          },
+          {
+            "line": 32,
+            "severity": "medium",
+            "category": "security",
+            "description": "No authorization check to verify if the requesting user has permission to access todos for the given userId",
+            "suggestion": "Add authentication/authorization middleware or parameter to verify the requesting user can only access their own todos"
+          },
+          {
+            "line": 40,
+            "severity": "medium",
+            "category": "security",
+            "description": "update method lacks ownership validation - any user could potentially update any todo if they know the ID",
+            "suggestion": "Add userId parameter and verify todo.userId matches the requesting user before allowing updates"
+          },
+          {
+            "line": 61,
+            "severity": "medium",
+            "category": "security",
+            "description": "delete method lacks ownership validation - any user could delete any todo if they know the ID",
+            "suggestion": "Add userId parameter and verify todo.userId matches the requesting user before allowing deletion"
+          },
+          {
+            "line": 25,
+            "severity": "medium",
+            "category": "security",
+            "description": "getById method exposes todos without authorization checks, allowing access to any todo with a known ID",
+            "suggestion": "Add userId parameter to verify the requesting user owns the todo, or return undefined if userId doesn't match"
+          },
+          {
+            "line": 66,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "Exporting a singleton instance prevents dependency injection and makes testing difficult. Cannot mock or replace the service instance easily",
+            "suggestion": "Export the class and create instances as needed, or use a factory pattern. For testing, this allows injecting mock dependencies"
+          },
+          {
+            "line": 6,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "No maximum size limit on the Map. Could lead to memory exhaustion if too many todos are created",
+            "suggestion": "Implement a maximum capacity check or use an LRU cache mechanism. Consider paginated queries when moving to a database"
+          },
+          {
+            "line": 49,
+            "severity": "low",
+            "category": "bug-risk",
+            "description": "update method allows overwriting 'id' and 'userId' through the spread operator if malicious data is passed",
+            "suggestion": "Explicitly construct the updated object with only allowed fields: { ...todo, title: updates.title, description: updates.description, completed: updates.completed, updatedAt: new Date() }"
+          },
+          {
+            "line": 12,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "All methods are marked async but don't actually perform any asynchronous operations with in-memory storage",
+            "suggestion": "Remove async/await if operations are synchronous, or keep them if planning to add database persistence later for easier migration"
+          },
+          {
+            "line": 32,
+            "severity": "low",
+            "category": "performance",
+            "description": "Array.from() creates a new array of all values before filtering. Inefficient for large datasets",
+            "suggestion": "Consider using a for...of loop or iterator approach: const result = []; for (const todo of this.todos.values()) { if (todo.userId === userId) result.push(todo); } return result;"
+          },
+          {
+            "line": 1,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "No input validation for parameters (empty strings, null, undefined checks)",
+            "suggestion": "Add parameter validation at the start of each method. Consider using a validation library like Zod or class-validator"
+          },
+          {
+            "line": 12,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "No error handling or try-catch blocks. Errors from createTodo will bubble up unhandled",
+            "suggestion": "Wrap operations in try-catch blocks and provide meaningful error messages. Consider creating custom error types"
+          },
+          {
+            "line": 6,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "Class could benefit from readonly modifier for better type safety since todos Map should not be reassigned",
+            "suggestion": "Change 'private todos' to 'private readonly todos' to prevent accidental reassignment"
+          },
+          {
+            "line": 6,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "No logging for operations. Difficult to debug issues or audit changes in production",
+            "suggestion": "Add logging for CRUD operations: creation, updates, deletions, and failed operations"
+          }
+        ],
+        "overallScore": 28,
+        "summary": "The TodoService implementation has significant security and scalability concerns. Critical issues include: (1) No data persistence - all data lost on restart, (2) Missing authorization checks allowing unauthorized access/modification of todos, (3) O(n) performance for user queries that won't scale. The code also exports a singleton preventing testability, lacks input validation, and has no error handling. While the API design is clean and well-documented, it requires substantial improvements before production use."
+      },
+      "testCoverage": {
+        "file": "src/services/todoService.ts",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "function",
+            "location": "TodoService.create",
+            "priority": "critical",
+            "reasoning": "Core creation logic with no tests. This is the primary entry point for creating todos and needs validation of happy path, error handling, and edge cases like empty titles or invalid userIds.",
+            "suggestedTest": "Test creating a todo with valid title and userId, verify todo is stored with correct properties. Test with optional parameters (description, dueDate, priority). Test with empty/null title and userId."
+          },
+          {
+            "type": "edge-case",
+            "location": "TodoService.create - empty/null parameters",
+            "priority": "high",
+            "reasoning": "No validation on title or userId parameters. Service should handle empty strings, null, undefined, and whitespace-only values.",
+            "suggestedTest": "Test create() with empty string title, null userId, undefined values, whitespace-only strings. Verify appropriate error handling or default behavior."
+          },
+          {
+            "type": "function",
+            "location": "TodoService.getById",
+            "priority": "high",
+            "reasoning": "Retrieval method with no tests for success and failure cases. Critical for data access layer.",
+            "suggestedTest": "Test getById with valid existing ID returns correct todo. Test with non-existent ID returns undefined. Test with null/empty/invalid ID formats."
+          },
+          {
+            "type": "function",
+            "location": "TodoService.getByUserId",
+            "priority": "high",
+            "reasoning": "Query method returning arrays with no tests. Needs validation of filtering logic and edge cases.",
+            "suggestedTest": "Test getByUserId returns all todos for a user. Test with userId that has no todos returns empty array. Test filtering works correctly when multiple users exist. Test with invalid userId."
+          },
+          {
+            "type": "function",
+            "location": "TodoService.update",
+            "priority": "critical",
+            "reasoning": "Update logic with no tests for partial updates, immutability of protected fields, and updatedAt timestamp behavior.",
+            "suggestedTest": "Test update with valid ID and partial updates. Test updating non-existent todo returns undefined. Test that id, createdAt, userId cannot be changed. Verify updatedAt is set to new Date(). Test with empty updates object."
+          },
+          {
+            "type": "edge-case",
+            "location": "TodoService.update - protected field immutability",
+            "priority": "high",
+            "reasoning": "TypeScript type Omit<> provides compile-time safety but runtime tests needed to ensure id, createdAt, userId truly cannot be modified through spread operator.",
+            "suggestedTest": "Test attempting to update with object containing id, createdAt, or userId fields. Verify these fields remain unchanged in the stored todo."
+          },
+          {
+            "type": "edge-case",
+            "location": "TodoService.update - non-existent todo",
+            "priority": "high",
+            "reasoning": "Update returns undefined for non-existent todos but no tests verify this behavior.",
+            "suggestedTest": "Test update with non-existent ID returns undefined. Test with null/empty ID. Verify no side effects on data store."
+          },
+          {
+            "type": "function",
+            "location": "TodoService.delete",
+            "priority": "high",
+            "reasoning": "Deletion method with no tests for success/failure return values.",
+            "suggestedTest": "Test delete with existing ID returns true and todo is removed. Test delete with non-existent ID returns false. Test with null/invalid ID."
+          },
+          {
+            "type": "class",
+            "location": "TodoService - data isolation",
+            "priority": "critical",
+            "reasoning": "Service uses singleton pattern (exported instance). No tests verify data isolation between test cases or concurrent operations.",
+            "suggestedTest": "Test that multiple operations don't interfere with each other. Test creating instance vs using singleton. Verify todos Map is properly isolated/reset between tests."
+          },
+          {
+            "type": "edge-case",
+            "location": "TodoService - integration with createTodo",
+            "priority": "high",
+            "reasoning": "Service depends on createTodo from models/todo.js but no tests verify integration or error handling if createTodo fails.",
+            "suggestedTest": "Test that create() properly calls createTodo with correct parameters. Mock createTodo to throw error and verify error propagation. Test options parameter is passed through correctly."
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "The TodoService has ZERO test coverage. All 5 CRUD methods (create, getById, getByUserId, update, delete) are completely untested. Critical gaps include: no validation testing for invalid inputs, no verification of data integrity constraints (immutable fields), no testing of edge cases (empty results, non-existent IDs, null/undefined parameters), no testing of the singleton export pattern, and no integration tests with the createTodo dependency. Immediate action needed: create comprehensive test suite."
+      },
+      "refactorings": {
+        "file": "src/services/todoService.ts",
+        "suggestions": [
+          {
+            "type": "pattern-improvement",
+            "location": "TodoService class, all methods",
+            "impact": "high",
+            "description": "The service lacks proper error handling and validation. Methods should validate inputs and throw meaningful errors rather than returning undefined. This improves API clarity and helps consumers handle errors properly.",
+            "before": "async getById(id: string): Promise<Todo | undefined> {\n  return this.todos.get(id);\n}",
+            "after": "async getById(id: string): Promise<Todo> {\n  if (!id?.trim()) {\n    throw new Error('Todo ID is required');\n  }\n  const todo = this.todos.get(id);\n  if (!todo) {\n    throw new Error(`Todo with id ${id} not found`);\n  }\n  return todo;\n}",
+            "benefits": "Clear error messages for debugging, no silent failures with undefined returns, consumers can use try-catch for error handling, validates input before processing, eliminates the need to check for undefined in every consumer."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "TodoService class definition",
+            "impact": "high",
+            "description": "Extract an interface to follow Dependency Inversion Principle. This enables testing with mocks, allows multiple implementations (e.g., database persistence), and improves maintainability.",
+            "before": "class TodoService {\n  private todos: Map<string, Todo> = new Map();\n}\nexport const todoService = new TodoService();",
+            "after": "interface ITodoRepository {\n  create(...): Promise<Todo>;\n  getById(id: string): Promise<Todo>;\n  ...\n}\n\nclass InMemoryTodoRepository implements ITodoRepository {\n  private todos: Map<string, Todo> = new Map();\n  ...\n}\n\nexport const todoService: ITodoRepository = new InMemoryTodoRepository();",
+            "benefits": "Enables dependency injection for testing, allows swapping implementations without changing consumers, follows SOLID principles, makes it easier to add database persistence later, improves testability by allowing mock implementations."
+          },
+          {
+            "type": "simplify",
+            "location": "All methods in TodoService",
+            "impact": "medium",
+            "description": "Methods don't perform any asynchronous operations currently. Removing async/await simplifies the code and improves performance by avoiding unnecessary Promise wrapping. Keep async only if future persistence layer will be async.",
+            "before": "async getById(id: string): Promise<Todo | undefined> {\n  return this.todos.get(id);\n}",
+            "after": "getById(id: string): Todo | undefined {\n  return this.todos.get(id);\n}",
+            "benefits": "Reduces unnecessary Promise overhead, clearer code intent (synchronous operations are obviously synchronous), slight performance improvement, easier to test without await. Note: If planning to add database persistence, keep async for forward compatibility."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "getByUserId method, lines 32-34",
+            "impact": "medium",
+            "description": "For scalability, add optional pagination parameters. This prevents performance issues when users have many todos.",
+            "before": "async getByUserId(userId: string): Promise<Todo[]> {\n  return Array.from(this.todos.values())\n    .filter(todo => todo.userId === userId);\n}",
+            "after": "async getByUserId(\n  userId: string,\n  options?: { limit?: number; offset?: number }\n): Promise<Todo[]> {\n  const todos = Array.from(this.todos.values())\n    .filter(todo => todo.userId === userId);\n  \n  const { limit, offset = 0 } = options || {};\n  \n  return limit !== undefined\n    ? todos.slice(offset, offset + limit)\n    : todos;\n}",
+            "benefits": "Enables efficient data fetching for large datasets, backward compatible with default behavior, prepares for future database pagination, improves API scalability."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "TodoService class",
+            "impact": "medium",
+            "description": "Add methods for common bulk operations like deleting all completed todos or marking multiple todos as complete. This reduces multiple API calls and improves efficiency.",
+            "before": "// No bulk operations - must call update/delete multiple times",
+            "after": "async deleteByUserId(userId: string): Promise<number> {\n  const userTodos = await this.getByUserId(userId);\n  let deletedCount = 0;\n  for (const todo of userTodos) {\n    if (this.todos.delete(todo.id)) {\n      deletedCount++;\n    }\n  }\n  return deletedCount;\n}",
+            "benefits": "Reduces network round trips in client-server scenarios, more efficient for common batch operations, better API design for real-world use cases, clearer intent for bulk operations."
+          }
+        ],
+        "summary": "The TodoService demonstrates solid TypeScript fundamentals but needs improvements in error handling, architecture, input validation, and scalability. High-priority refactorings include replacing undefined returns with proper error throwing, extracting an interface for dependency injection, and adding input validation. These refactorings will transform the service from a basic implementation to a production-ready, maintainable, and testable component."
+      }
+    }
+  ],
+  "summary": {
+    "totalFiles": 2,
+    "overallScore": 47.5,
+    "criticalIssues": 4,
+    "highPriorityTests": 18,
+    "refactoringOpportunities": 11
+  },
+  "recommendations": [
+    {
+      "priority": "critical",
+      "category": "Security",
+      "description": "Replace insecure ID generation with cryptographically secure UUIDs. The current Math.random() + Date.now() approach can produce ID collisions in high-concurrency scenarios, leading to data corruption.",
+      "files": [
+        "src/models/todo.ts"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Data Persistence",
+      "description": "Implement data persistence mechanism. In-memory Map storage loses all data on server restart or crash, making this unsuitable for production use. Consider adding database integration or file-based persistence.",
+      "files": [
+        "src/services/todoService.ts"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Testing",
+      "description": "Add comprehensive test coverage for core business logic. Both files have 0% test coverage. Priority: test ID generation uniqueness, createTodo factory function, and all TodoService CRUD operations.",
+      "files": [
+        "src/models/todo.ts",
+        "src/services/todoService.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Security",
+      "description": "Add authorization checks to all TodoService methods. Currently any user can access, modify, or delete any todo if they know the ID. Implement userId verification before allowing operations.",
+      "files": [
+        "src/services/todoService.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Code Quality",
+      "description": "Replace deprecated substr() method with modern slice() or substring(). This prevents future compatibility issues as substr() is deprecated in modern JavaScript.",
+      "files": [
+        "src/models/todo.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Performance",
+      "description": "Optimize getByUserId method which performs O(n) linear scan. Implement secondary indexing with Map<userId, Set<todoId>> for O(1) lookups, or use a database with proper indexing.",
+      "files": [
+        "src/services/todoService.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Architecture",
+      "description": "Extract ITodoRepository interface to enable dependency injection and improve testability. The current singleton pattern makes testing difficult and prevents mocking.",
+      "files": [
+        "src/services/todoService.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Input Validation",
+      "description": "Add input validation to createTodo function. Validate that title and userId are non-empty strings, and priority values are within the allowed set ('low' | 'medium' | 'high').",
+      "files": [
+        "src/models/todo.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Error Handling",
+      "description": "Replace undefined returns with proper error throwing in TodoService methods. Current approach returns undefined for not-found cases, making error handling ambiguous for API consumers.",
+      "files": [
+        "src/services/todoService.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Type Safety",
+      "description": "Extract complex Partial<Omit<...>> type to named CreateTodoOptions type for better readability and reusability. Also extract TodoPriority union type for use across the application.",
+      "files": [
+        "src/models/todo.ts"
+      ]
+    }
+  ],
+  "metadata": {
+    "analyzedAt": "2026-09-27T00:00:00.000Z",
+    "duration": 45000,
+    "agentVersions": {
+      "code-quality-analyzer": "1.0.0",
+      "test-coverage-analyzer": "1.0.0",
+      "refactoring-suggester": "1.0.0"
+    }
+  }
+}
